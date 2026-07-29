@@ -9,11 +9,11 @@ let uiLanguage=localStorage.getItem(LANGUAGE_KEY)||"it";
 let accessMode=new URLSearchParams(location.search).get("view")==="public"?"viewer":"admin";
 const TRANSLATIONS={
  "Amministratore":"Administrator","Visualizzatore":"Public viewer","Vista pubblica":"Public view","Login admin":"Admin login",
- "Salvato in locale":"Saved locally","Esporta":"Export","Importa":"Import","Iscrizioni":"Registrations","Squadre":"Teams","Gironi":"Groups","Partite":"Matches","Fase finale":"Knockout","Statistiche":"Statistics","Regolamento":"Rules",
+ "Salvato in locale":"Saved locally","Esporta":"Export","Importa":"Import","Iscrizioni":"Registrations","Squadre":"Teams","Formato":"Format","Gironi":"Groups","Partite":"Matches","Fase finale":"Knockout","Statistiche":"Statistics","Regolamento":"Rules",
  "Archivio tornei":"Tournament archive","I tuoi tornei":"Your tournaments","Crea torneo":"Create tournament","Nessun torneo":"No tournaments","Centro torneo":"Tournament center",
  "Gestisci iscrizioni":"Manage registrations","Configura torneo":"Set up tournament","Iscritti":"Entrants","Montepremi":"Prize pool","Prossime partite":"Upcoming matches","Attività recente":"Recent activity",
  "Fase 1":"Step 1","Fase 2":"Step 2","Fase 3":"Step 3","Fase 4":"Step 4","Fase 5":"Step 5","Analisi":"Analysis","Guida ufficiale":"Official guide",
- "Composizione squadre":"Team composition","Calendario e risultati":"Schedule and results","Regolamento del torneo":"Tournament rules","Dati casuali":"Random data",
+ "Composizione squadre":"Team composition","Formato torneo":"Tournament format","Gironi + playoff":"Groups + playoffs","Girone unico":"Single league","Eliminazione diretta":"Single elimination","Campionato + playoff":"League + playoffs","Calendario e risultati":"Schedule and results","Regolamento del torneo":"Tournament rules","Dati casuali":"Random data",
  "Scarica template Excel":"Download Excel template","Importa Excel":"Import Excel","Nuova iscrizione":"New registration","Nome torneo":"Tournament name","Biliardini disponibili":"Available tables",
  "Ore disponibili":"Available hours","Giocatori per squadra":"Players per team","Salva impostazioni":"Save settings","Iscrizioni singole":"Individual registration","Iscrizioni a squadre":"Team registration",
  "Giocatore":"Player","Contatto":"Contact","Ruolo":"Role","Livello":"Level","Stato":"Status","Portiere":"Goalkeeper","Attaccante":"Forward","Indifferente":"Either",
@@ -32,9 +32,15 @@ const NAME_THEMES={
  animali:["Leoni","Tigri","Falchi","Lupi","Pantere","Squali","Cobra","Bisonti","Aquile","Puma","Draghi","Orsi","Volpi","Ghepardi","Rinoceronti","Gorilla","Scorpioni","Piranha","Tori","Corvi","Iene","Coccodrilli","Vespe","Grifoni"],
  ironici:["Gli Svitati","Palla Boh","Barre Storte","Gol per Caso","I Senza Polsi","Mani di Legno","Gli Infilzati","Tutto Gancio","Rullo Compressore","I Fuori Asta","Zero Tattica","Birra e Gol","Gli Scappati","Palla Persa","Mai Una Gioia","I Panchinari","Tiro a Caso","Gli Imbullonati","Quelli del Bar","Asta la Vista","No Look Team","Gli Sbilanciati","Ultimo Posto","VAR da Bar"]
 };
+const TOURNAMENT_FORMATS={
+ classic:{name:"Gironi + playoff",tag:"Consigliata",description:"Gironi equilibrati e successiva eliminazione diretta. Garantisce più partite a tutti."},
+ league:{name:"Girone unico",tag:"Campionato",description:"Tutti contro tutti una volta. Vince la prima squadra della classifica finale."},
+ knockout:{name:"Eliminazione diretta",tag:"Più veloce",description:"Tabellone immediato con passaggi automatici quando il numero di squadre non è una potenza di due."},
+ league_playoff:{name:"Campionato + playoff",tag:"Stile Carmagnola",description:"Tutti contro tutti, poi le migliori 4 o 8 accedono al tabellone finale."}
+};
 
 function blankState(){
-  return {version:2,id:uid("tournament"),mode:"single",teamSize:2,title:"Nuovo torneo",tables:4,availableHours:6,matchMinutes:12,seed:"BALILLA-2026",nameTheme:"sportive",entryFee:0,fixedCosts:0,prizeSplit:[50,30,20],withdrawalPolicy:"forfeit",players:[],teams:[],groups:[],matches:[],knockout:[],createdAt:new Date().toISOString(),log:[]};
+  return {version:2,id:uid("tournament"),mode:"single",teamSize:2,tournamentFormat:"classic",title:"Nuovo torneo",tables:4,availableHours:6,matchMinutes:12,seed:"BALILLA-2026",nameTheme:"sportive",entryFee:0,fixedCosts:0,prizeSplit:[50,30,20],withdrawalPolicy:"forfeit",players:[],teams:[],groups:[],matches:[],knockout:[],createdAt:new Date().toISOString(),log:[]};
 }
 let library=loadLibrary(), state=null, currentView="dashboard", matchFilter="all";
 const $=s=>document.querySelector(s), main=$("#main");
@@ -95,7 +101,7 @@ function render(){
   if(!state){renderHub();applyUiMode();return}
   $("#nav").hidden=false;
   document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===currentView));
-  ({dashboard,registrations,teams,groups,matches,knockout,stats,rules}[currentView]||dashboard)();
+  ({dashboard,registrations,teams,format,groups,matches,knockout,stats,rules}[currentView]||dashboard)();
   applyUiMode();
 }
 function renderHub(){
@@ -103,7 +109,7 @@ function renderHub(){
  main.innerHTML=`<div class="hub"><section class="hub-hero"><div class="eyebrow">Archivio tornei</div><h1>I tuoi tornei</h1><p class="muted">Ogni cartella conserva iscritti, calendario, risultati e statistiche separatamente.</p></section><div class="actions" style="margin:18px 0 24px"><button class="btn" data-action="new-tournament">+ Crea torneo</button></div>${library.tournaments.length?`<div class="folder-grid">${library.tournaments.map(t=>`<article class="card folder" data-open-tournament="${t.id}"><button class="folder-delete" data-delete-tournament="${t.id}" aria-label="Elimina ${esc(t.title)}">×</button><div class="folder-icon">📁</div><h2>${esc(t.title)}</h2><p class="muted">${new Date(t.createdAt).toLocaleDateString("it-IT")}</p><div class="folder-meta"><span class="badge">${t.players?.length||0} iscritti</span><span class="badge gray">${t.tables||4} biliardini</span><span class="badge gold">${t.matches?.filter(m=>m.played).length||0} risultati</span></div></article>`).join("")}</div>`:empty("Nessun torneo","Crea la prima cartella torneo per cominciare.")}</div>`;
 }
 function createTournament(){
- modal(`<h2>Nuovo torneo</h2><form id="newTournamentForm" class="form-grid"><label class="field full">Nome del torneo<input name="title" required autofocus placeholder="Es. Torneo Estate 2026"></label><label class="field">Biliardini disponibili<input name="tables" type="number" min="1" value="4" required></label><label class="field">Ore disponibili<input name="availableHours" type="number" min="1" step=".5" value="6" required></label><label class="field">Minuti per partita, cambio incluso<input name="matchMinutes" type="number" min="5" value="12" required></label><label class="field">Tipo iscrizione<select name="mode"><option value="single">Singoli</option><option value="team">Squadre</option></select></label><label class="field">Giocatori per squadra<select name="teamSize"><option value="2">2 giocatori</option><option value="3">3 giocatori</option></select></label><div class="full"><button class="btn">Crea cartella</button></div></form>`,()=>{const d=Object.fromEntries(new FormData($("#newTournamentForm")));state=blankState();state.title=d.title.trim();state.tables=Math.max(1,+d.tables||1);state.availableHours=Math.max(1,+d.availableHours||6);state.matchMinutes=Math.max(5,+d.matchMinutes||12);state.mode=d.mode;state.teamSize=+d.teamSize||2;save("Torneo creato");closeModal();currentView="dashboard";render()});
+ modal(`<h2>Nuovo torneo</h2><form id="newTournamentForm" class="form-grid"><label class="field full">Nome del torneo<input name="title" required autofocus placeholder="Es. Torneo Estate 2026"></label><label class="field">Biliardini disponibili<input name="tables" type="number" min="1" value="4" required></label><label class="field">Ore disponibili<input name="availableHours" type="number" min="1" step=".5" value="6" required></label><label class="field">Minuti per partita, cambio incluso<input name="matchMinutes" type="number" min="5" value="12" required></label><label class="field">Tipo iscrizione<select name="mode"><option value="single">Singoli</option><option value="team">Squadre</option></select></label><label class="field">Giocatori per squadra<select name="teamSize"><option value="2">2 giocatori</option><option value="3">3 giocatori</option></select></label><label class="field full">Formato iniziale<select name="tournamentFormat"><option value="classic">Gironi + playoff (consigliato)</option><option value="league">Girone unico</option><option value="knockout">Eliminazione diretta</option><option value="league_playoff">Campionato + playoff</option></select></label><div class="full"><button class="btn">Crea cartella</button></div></form>`,()=>{const d=Object.fromEntries(new FormData($("#newTournamentForm")));state=blankState();state.title=d.title.trim();state.tables=Math.max(1,+d.tables||1);state.availableHours=Math.max(1,+d.availableHours||6);state.matchMinutes=Math.max(5,+d.matchMinutes||12);state.mode=d.mode;state.teamSize=+d.teamSize||2;state.tournamentFormat=d.tournamentFormat||"classic";save("Torneo creato");closeModal();currentView="dashboard";render()});
 }
 function dashboard(){
   const done=state.matches.filter(m=>m.played).length+state.knockout.filter(m=>m.played).length;
@@ -123,9 +129,24 @@ function dashboard(){
 function kpi(label,value,hint,progress){return `<div class="card kpi"><small>${label}</small><strong>${value}</strong><div class="hint">${hint}</div><div class="progress"><i style="width:${Math.min(100,progress||0)}%"></i></div></div>`}
 function dynamicGroupSizes(teamCount){if(teamCount<2)return[];let groups=Math.max(1,Math.ceil(teamCount/4));while(groups>1&&Math.floor(teamCount/groups)<3)groups--;const base=Math.floor(teamCount/groups),extra=teamCount%groups;return Array.from({length:groups},(_,i)=>base+(i<extra?1:0))}
 function suggestedKnockoutSize(teamCount){if(teamCount<4)return 2;const target=teamCount*.67,powers=[];for(let p=4;p<=teamCount;p*=2)powers.push(p);return powers.sort((a,b)=>Math.abs(a-target)-Math.abs(b-target))[0]||2}
-function estimateTournament(teamCount){if(teamCount<2)return{matches:0,minutes:0,groups:0,ko:0};const sizes=dynamicGroupSizes(teamCount),groupMatches=sizes.reduce((s,n)=>s+n*(n-1)/2,0),ko=suggestedKnockoutSize(teamCount),tables=Math.max(1,state?.tables||4),slot=Math.max(5,state?.matchMinutes||12);let slots=Math.ceil(groupMatches/tables),roundMatches=ko/2;while(roundMatches>=1){slots+=Math.ceil(roundMatches/tables);roundMatches/=2}slots+=1;return{matches:groupMatches+ko,minutes:Math.ceil(slots*slot*1.08),groups:sizes.length,ko}}
+function previousPowerOfTwo(n){let p=1;while(p*2<=n)p*=2;return p}
+function nextPowerOfTwo(n){let p=1;while(p<n)p*=2;return p}
+function playoffSize(teamCount){return Math.min(8,Math.max(2,previousPowerOfTwo(teamCount)))}
+function estimateTournament(teamCount,format=state?.tournamentFormat||"classic"){
+ if(teamCount<2)return{matches:0,minutes:0,groups:0,ko:0,guaranteed:0};
+ const tables=Math.max(1,state?.tables||4),slot=Math.max(5,state?.matchMinutes||12),leagueMatches=teamCount*(teamCount-1)/2;
+ let groupMatches=0,groups=0,ko=0,guaranteed=1,roundSlots=0;
+ if(format==="classic"){const sizes=dynamicGroupSizes(teamCount);groups=sizes.length;groupMatches=sizes.reduce((s,n)=>s+n*(n-1)/2,0);ko=suggestedKnockoutSize(teamCount);guaranteed=Math.max(1,Math.min(...sizes)-1)}
+ if(format==="league"){groups=1;groupMatches=leagueMatches;guaranteed=teamCount-1}
+ if(format==="league_playoff"){groups=1;groupMatches=leagueMatches;ko=playoffSize(teamCount);guaranteed=teamCount-1}
+ if(format==="knockout"){ko=nextPowerOfTwo(teamCount);guaranteed=1}
+ if(ko){const first=format==="knockout"?teamCount-ko/2:ko/2;roundSlots+=Math.ceil(Math.max(0,first)/tables);for(let m=ko/4;m>=1;m/=2)roundSlots+=Math.ceil(m/tables);if(ko>=4)roundSlots+=1}
+ const actualKo=format==="knockout"?teamCount-1+(teamCount>=4?1:0):ko;
+ const slots=Math.ceil(groupMatches/tables)+roundSlots;
+ return{matches:groupMatches+actualKo,minutes:Math.ceil(slots*slot*1.08),groups,ko,guaranteed};
+}
 function capacityLimit(ratio=1){const budget=(state.availableHours||6)*60*ratio;let best=4;for(let n=4;n<=256;n++)if(estimateTournament(n).minutes<=budget)best=n;return best}
-function capacityPanel(){const currentTeams=state.mode==="single"?Math.floor(state.players.length/(state.teamSize||2)):state.teams.length,est=estimateTournament(currentTeams),recommended=capacityLimit(.85),maximum=capacityLimit(1),peopleRec=recommended*(state.teamSize||2),over=est.minutes>(state.availableHours||6)*60;return `<div class="capacity-panel ${over?"over":""}"><div><small>STIMA DI CAPIENZA</small><b>${recommended} squadre consigliate · ${maximum} al limite</b><span>${peopleRec} persone consigliate con rose da ${state.teamSize||2}</span></div><div><small>CONFIGURAZIONE ATTUALE</small><b>${currentTeams} squadre · circa ${Math.floor(est.minutes/60)}h ${est.minutes%60}m</b><span>${est.groups||"—"} gironi · fase finale da ${est.ko||"—"}</span></div></div>`}
+function capacityPanel(){const currentTeams=state.mode==="single"?Math.floor(state.players.length/(state.teamSize||2)):state.teams.length,est=estimateTournament(currentTeams),recommended=capacityLimit(.85),maximum=capacityLimit(1),peopleRec=recommended*(state.teamSize||2),over=est.minutes>(state.availableHours||6)*60;return `<div class="capacity-panel ${over?"over":""}"><div><small>STIMA DI CAPIENZA</small><b>${recommended} squadre consigliate · ${maximum} al limite</b><span>${peopleRec} persone consigliate con rose da ${state.teamSize||2}</span></div><div><small>CONFIGURAZIONE ATTUALE</small><b>${currentTeams} squadre · circa ${Math.floor(est.minutes/60)}h ${est.minutes%60}m</b><span>${TOURNAMENT_FORMATS[state.tournamentFormat||"classic"].name} · ${est.matches} partite</span></div></div>`}
 function nextMatches(){const games=[...state.matches,...state.knockout].filter(m=>!m.played).slice(0,5);return games.length?games.map(m=>`<div class="record"><span>${esc(nameTeam(m.a))} <b>vs</b> ${esc(nameTeam(m.b))}</span><small class="muted">${m.table?`Turno ${m.slot} · Tavolo ${m.table}`:m.round}</small></div>`).join(""):`<div class="empty"><div class="icon">▤</div><h3>Nessuna partita in attesa</h3><p>Genera il calendario o completa il torneo.</p></div>`}
 
 function registrations(){
@@ -153,31 +174,44 @@ function teams(){
 }
 function teamCard(t,i){const members=t.playerIds?.map(player).filter(Boolean)||[];return `<article class="team-card"><div class="team-name"><span>${esc(t.name)}</span><span class="badge ${t.withdrawn?"red":"gold"}">${t.withdrawn?"Ritirata":"#"+(i+1)}</span></div><div class="players">${members.length?members.map(p=>`<div><b>${esc(p.name)}</b> · ${ROLE_LABEL[p.role]} · ${LEVEL_LABEL[p.level]}</div>`).join(""):esc(t.memberNames?.join(" · ")||"")}</div><div class="actions" style="margin-top:10px"><button class="btn small secondary" data-rename-team="${t.id}">Rinomina</button>${state.mode==="single"?`<button class="btn small secondary" data-manual-team="${t.id}">Modifica coppia</button><button class="btn small secondary" data-substitute-team="${t.id}">Sostituzione</button>`:""}${state.groups.length&&!t.withdrawn?`<button class="btn small secondary" data-withdraw-team="${t.id}">Ritiro</button>`:""}</div></article>`}
 
+function format(){
+ const count=state.teams.length,current=state.tournamentFormat||"classic";
+ main.innerHTML=pageHead("Fase 3","Formato torneo","Scegli la struttura più adatta a partecipanti, tempo e biliardini.")+
+ (count<2?`<div class="warning">Componi almeno 2 squadre per ottenere stime attendibili.</div>`:"")+
+ `<div class="format-grid">${Object.entries(TOURNAMENT_FORMATS).map(([key,f])=>{const est=estimateTournament(count,key),over=est.minutes>(state.availableHours||6)*60;return `<article class="card format-card ${current===key?"selected":""}"><div class="format-card-head"><span class="badge ${key==="classic"?"gold":"gray"}">${f.tag}</span>${current===key?`<span class="selected-check">✓ Selezionata</span>`:""}</div><h2>${f.name}</h2><p>${f.description}</p><div class="format-metrics"><span><b>${est.matches}</b> partite</span><span><b>${Math.floor(est.minutes/60)}h ${est.minutes%60}m</b> stimate</span><span><b>${est.guaranteed}</b> garantite</span><span class="${over?"format-over":""}">${over?"⚠ Supera il tempo":"✓ Compatibile"}</span></div><button class="btn ${current===key?"secondary":""}" data-tournament-format="${key}" ${current===key?"disabled":""}>${current===key?"Formato attivo":"Scegli formato"}</button></article>`}).join("")}</div>
+ <div class="card format-summary"><h2>Configurazione usata per la stima</h2><p><b>${count} squadre</b> · ${state.tables||4} biliardini · ${state.availableHours||6} ore disponibili · ${state.matchMinutes||12} minuti medi per partita.</p><p class="muted">La scelta può essere cambiata finché non sono stati inseriti risultati. Cambiandola, gironi, calendario e tabellone vengono rigenerati.</p></div>`;
+}
+
 function groups(){
- const sizes=dynamicGroupSizes(state.teams.length),est=estimateTournament(state.teams.length),over=est.minutes>(state.availableHours||6)*60;
- main.innerHTML=pageHead("Fase 3","Gironi",`${sizes.length||0} gironi dinamici · ${state.teams.length} squadre · fase finale prevista da ${est.ko}.`,`<button class="btn secondary" data-action="print">Stampa</button><button class="btn" data-action="generate-groups" ${state.teams.length<4?"disabled":""}>${state.groups.length?"Rigenera gironi":"Genera gironi"}</button>`)+
+ const mode=state.tournamentFormat||"classic",est=estimateTournament(state.teams.length),over=est.minutes>(state.availableHours||6)*60,direct=mode==="knockout",leagueMode=mode==="league"||mode==="league_playoff",minTeams=direct?2:4;
+ const title=direct?"Eliminazione diretta":leagueMode?"Campionato":"Gironi";
+ const sub=direct?`${state.teams.length} squadre · tabellone con passaggi automatici.`:leagueMode?`Girone unico · ${state.teams.length} squadre · ${state.teams.length?state.teams.length-1:0} partite garantite.`:`${est.groups||0} gironi dinamici · ${state.teams.length} squadre · fase finale prevista da ${est.ko}.`;
+ const generated=direct?state.knockout.length:state.groups.length;
+ main.innerHTML=pageHead("Fase 4",title,sub,`<button class="btn secondary" data-action="print">Stampa</button><button class="btn" data-action="generate-groups" ${state.teams.length<minTeams?"disabled":""}>${generated?"Rigenera struttura":"Genera struttura"}</button>`)+
  (over?`<div class="warning">La durata stimata supera le ${state.availableHours||6} ore disponibili. Puoi procedere comunque oppure aumentare tempo/biliardini.</div>`:"")+
- (state.teams.length<4?`<div class="warning">Servono almeno 4 squadre per generare il torneo.</div>`:"")+
- (state.groups.length?`<div class="group-grid">${state.groups.map((g,i)=>groupCard(g,i)).join("")}</div>`:empty("Gironi non ancora generati","Componi le squadre e avvia il sorteggio."));
+ (state.teams.length<minTeams?`<div class="warning">Servono almeno ${minTeams} squadre per generare il torneo.</div>`:"")+
+ (direct?(state.knockout.length?`<div class="card"><h2>Tabellone creato</h2><p>Apri la sezione Fase finale per inserire i risultati.</p><button class="btn" data-view="knockout">Vai al tabellone</button></div>`:empty("Tabellone non ancora generato","Scegli il formato e genera la struttura.")):(state.groups.length?`<div class="group-grid ${leagueMode?"single-group":""}">${state.groups.map((g,i)=>groupCard(g,i)).join("")}</div>`:empty("Struttura non ancora generata","Componi le squadre e avvia la generazione.")));
 }
 function groupLabel(i){return i<26?String.fromCharCode(65+i):String(i+1)}
-function groupCard(g,i){const standings=getStandings(g),total=g.length*(g.length-1)/2;return `<article class="card group-card"><div class="group-title"><b>Girone ${groupLabel(i)}</b><span>${state.matches.filter(m=>m.group===i&&m.played).length}/${total}</span></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Squadra</th><th>Pt</th><th>DR</th><th>GF</th></tr></thead><tbody>${standings.map((s,x)=>`<tr><td>${x+1}</td><td><b>${esc(nameTeam(s.id))}</b></td><td>${s.pts}</td><td>${s.gd>0?"+":""}${s.gd}</td><td>${s.gf}</td></tr>`).join("")}</tbody></table></div></article>`}
+function groupCard(g,i){const standings=getStandings(g),total=g.length*(g.length-1)/2,leagueMode=["league","league_playoff"].includes(state.tournamentFormat);return `<article class="card group-card"><div class="group-title"><b>${leagueMode?"Classifica generale":`Girone ${groupLabel(i)}`}</b><span>${state.matches.filter(m=>m.group===i&&m.played).length}/${total}</span></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Squadra</th><th>Pt</th><th>DR</th><th>GF</th></tr></thead><tbody>${standings.map((s,x)=>`<tr><td>${x+1}</td><td><b>${esc(nameTeam(s.id))}</b></td><td>${s.pts}</td><td>${s.gd>0?"+":""}${s.gd}</td><td>${s.gf}</td></tr>`).join("")}</tbody></table></div></article>`}
 
 function matches(){
- const filtered=state.matches.filter(m=>matchFilter==="all"||String(m.group)===matchFilter);
- main.innerHTML=pageHead("Fase 4","Calendario e risultati",`Partite distribuite su ${state.tables||4} biliardini senza sovrapposizioni.`,`<button class="btn secondary test-btn" data-action="random-group-results" ${state.matches.length?"":"disabled"}>⚗ Risultati casuali</button><button class="btn secondary" data-action="print">Stampa</button>`)+
- `<div class="tabs"><button data-filter="all" class="${matchFilter==="all"?"active":""}">Tutte</button>${state.groups.map((_,i)=>`<button data-filter="${i}" class="${matchFilter==i?"active":""}">Girone ${groupLabel(i)}</button>`).join("")}</div>
- <div class="card">${filtered.length?filtered.map(matchRow).join(""):empty("Calendario assente","Genera i gironi per creare automaticamente tutte le partite.")}</div>`;
+ const filtered=state.matches.filter(m=>matchFilter==="all"||String(m.group)===matchFilter),leagueMode=["league","league_playoff"].includes(state.tournamentFormat),direct=state.tournamentFormat==="knockout";
+ main.innerHTML=pageHead("Fase 5","Calendario e risultati",direct?"Le partite sono gestite direttamente nel tabellone finale.":`Partite distribuite su ${state.tables||4} biliardini senza sovrapposizioni.`,`<button class="btn secondary test-btn" data-action="random-group-results" ${state.matches.length?"":"disabled"}>⚗ Risultati casuali</button><button class="btn secondary" data-action="print">Stampa</button>`)+
+ `<div class="tabs"><button data-filter="all" class="${matchFilter==="all"?"active":""}">Tutte</button>${state.groups.map((_,i)=>`<button data-filter="${i}" class="${matchFilter==i?"active":""}">${leagueMode?"Campionato":`Girone ${groupLabel(i)}`}</button>`).join("")}</div>
+ <div class="card">${filtered.length?filtered.map(matchRow).join(""):empty("Calendario assente",direct?"Apri la fase finale per gestire il tabellone.":"Genera la struttura per creare automaticamente tutte le partite.")}</div>`;
 }
 function matchRow(m){return `<div class="match-row"><span class="badge gray">T${m.slot} · Tav. ${m.table}</span><span style="text-align:right"><b>${esc(nameTeam(m.a))}</b></span><span class="match-score ${m.played?"":"pending"}">${m.played?`${m.ga} — ${m.gb}`:"—"}</span><span><b>${esc(nameTeam(m.b))}</b></span><button class="btn small ${m.played?"secondary":""}" data-result="${m.id}">${m.played?"Modifica":"Risultato"}</button></div>`}
 
 function knockout(){
- const can=state.groups.length&&state.groups.every((g,i)=>state.matches.filter(m=>m.group===i).every(m=>m.played));
+ const mode=state.tournamentFormat||"classic",leagueOnly=mode==="league",direct=mode==="knockout";
+ const can=direct?state.teams.length>=2:state.groups.length&&state.groups.every((g,i)=>state.matches.filter(m=>m.group===i).every(m=>m.played));
  const champ=getChampion();
- main.innerHTML=pageHead("Fase 5","Fase finale",`Tabellone dinamico da ${suggestedKnockoutSize(state.teams.length)} squadre.`,`${state.knockout.length?`<button class="btn secondary test-btn" data-action="random-knockout">⚗ Completa casualmente</button>`:""}<button class="btn secondary" data-action="print">Stampa</button>${!state.knockout.length?`<button class="btn" data-action="generate-knockout" ${can?"":"disabled"}>Crea tabellone</button>`:""}`)+
+ main.innerHTML=pageHead("Fase 6",leagueOnly?"Vincitore del campionato":"Fase finale",leagueOnly?"Il primo classificato al termine di tutte le partite vince il torneo.":`Tabellone ${direct?"a eliminazione diretta":`da ${mode==="league_playoff"?playoffSize(state.teams.length):suggestedKnockoutSize(state.teams.length)} squadre`}.`,`${state.knockout.length?`<button class="btn secondary test-btn" data-action="random-knockout">⚗ Completa casualmente</button>`:""}<button class="btn secondary" data-action="print">Stampa</button>${!leagueOnly&&!state.knockout.length?`<button class="btn" data-action="generate-knockout" ${can?"":"disabled"}>Crea tabellone</button>`:""}`)+
  (champ?`<div class="champion"><div class="cup">🏆</div><small>VINCITORE DEL TORNEO</small><h2>${esc(champ.name)}</h2><p>Congratulazioni!</p></div>`:"")+
- (!can&&!state.knockout.length?`<div class="warning">Completa tutte le partite dei gironi per creare la fase finale.</div>`:"")+
- (state.knockout.length?bracket():empty("Tabellone non ancora creato","La dimensione della fase finale verrà calcolata automaticamente."));
+ (leagueOnly&&!champ?`<div class="warning">Completa tutte le partite del campionato per proclamare il vincitore.</div>`:"")+
+ (!leagueOnly&&!can&&!state.knockout.length?`<div class="warning">Completa tutte le partite della prima fase per creare il tabellone.</div>`:"")+
+ (leagueOnly?(state.groups.length?groupCard(state.groups[0],0):empty("Campionato non generato","Genera prima il calendario.")):(state.knockout.length?bracket():empty("Tabellone non ancora creato","La dimensione della fase finale verrà calcolata automaticamente.")));
 }
 function knockoutRoundNames(size){const map={2:["Finale"],4:["Semifinali","Finale"],8:["Quarti","Semifinali","Finale"],16:["Ottavi","Quarti","Semifinali","Finale"],32:["Sedicesimi","Ottavi","Quarti","Semifinali","Finale"],64:["Trentaduesimi","Sedicesimi","Ottavi","Quarti","Semifinali","Finale"],128:["Sessantaquattresimi","Trentaduesimi","Sedicesimi","Ottavi","Quarti","Semifinali","Finale"]};return map[size]||["Finale"]}
 function mainKnockoutRounds(){return [...new Set(state.knockout.filter(m=>m.round!=="3° posto").sort((a,b)=>(a.roundIndex??99)-(b.roundIndex??99)).map(m=>m.round))]}
@@ -193,17 +227,18 @@ function stats(){
  <div class="card" style="margin-top:16px"><h2>Statistiche giocatori</h2><p class="muted">Ogni giocatore eredita i risultati e i gol della propria squadra; i gol individuali non sono conteggiati perché il risultato registra il totale della coppia.</p>${state.mode==="single"?`<div class="table-wrap"><table><thead><tr><th>Giocatore</th><th>Squadra</th><th>Ruolo</th><th>PG</th><th>V</th><th>% V</th></tr></thead><tbody>${state.players.map(p=>{const t=state.teams.find(t=>t.playerIds?.includes(p.id)),s=t?teamStats(t.id):{played:0,wins:0};return`<tr><td><b>${esc(p.name)}</b></td><td>${esc(t?.name||"—")}</td><td>${ROLE_LABEL[p.role]}</td><td>${s.played}</td><td>${s.wins}</td><td>${pct(s.wins,s.played)}</td></tr>`}).join("")}</tbody></table></div>`:"<p>In modalità squadra non sono disponibili schede giocatore separate.</p>"}</div>
  <div class="card" style="margin-top:16px"><h2>Hall of Fame dei tornei</h2><p class="muted">Archivio delle edizioni concluse, senza ranking storico individuale.</p>${hallOfFame()}</div>`;
 }
-function teamStats(id){const games=[...state.matches,...state.knockout].filter(m=>m.played&&(m.a===id||m.b===id));let gf=0,ga=0,wins=0;const form=[];games.forEach(m=>{const home=m.a===id,a=home?m.ga:m.gb,b=home?m.gb:m.ga;gf+=a;ga+=b;wins+=a>b;form.push(a>b?"V":"S")});return{played:games.length,wins,losses:games.length-wins,gf,ga,gd:gf-ga,form:form.slice(-5)}}
+function teamStats(id){const games=[...state.matches,...state.knockout].filter(m=>m.played&&!m.bye&&(m.a===id||m.b===id));let gf=0,ga=0,wins=0;const form=[];games.forEach(m=>{const home=m.a===id,a=home?m.ga:m.gb,b=home?m.gb:m.ga;gf+=a;ga+=b;wins+=a>b;form.push(a>b?"V":"S")});return{played:games.length,wins,losses:games.length-wins,gf,ga,gd:gf-ga,form:form.slice(-5)}}
 function hallOfFame(){const completed=library.tournaments.map(t=>{const f=t.knockout?.find(m=>m.round==="Finale"&&m.played);if(!f)return null;const winnerId=f.ga>f.gb?f.a:f.b,winner=t.teams.find(x=>x.id===winnerId),games=[...(t.matches||[]),...(t.knockout||[])].filter(m=>m.played);let best=null;t.teams.forEach(tm=>{const gf=games.reduce((s,m)=>s+(m.a===tm.id?m.ga:m.b===tm.id?m.gb:0),0);if(!best||gf>best.gf)best={name:tm.name,gf}});return{title:t.title,winner:winner?.name||"—",best}}).filter(Boolean);return completed.length?`<div class="table-wrap"><table><thead><tr><th>Torneo</th><th>Campione</th><th>Miglior attacco</th></tr></thead><tbody>${completed.map(x=>`<tr><td><b>${esc(x.title)}</b></td><td>🏆 ${esc(x.winner)}</td><td>${esc(x.best?.name||"—")} · ${x.best?.gf||0} gol</td></tr>`).join("")}</tbody></table></div>`:`<div class="empty">Completa una finale per inaugurare la Hall of Fame.</div>`}
 
 function rules(){
+ const selectedFormat=TOURNAMENT_FORMATS[state.tournamentFormat||"classic"];
  main.innerHTML=pageHead("Guida ufficiale","Regolamento del torneo","Regole uniche valide su tutti i modelli di biliardino.",`<button class="btn secondary" data-action="print">Stampa regolamento</button>`)+
- `<article class="card rules"><h2>1. Formato</h2><p>Il numero di squadre non ha un limite fisso. Il sistema crea gironi il più possibile uniformi, normalmente da 4 squadre, e stima la durata usando biliardini, ore disponibili e minuti medi per partita. La stima è informativa e non blocca le iscrizioni. Se la modalità scelta è da 2 e il numero dei titolari è dispari, una sola squadra viene composta da 3 persone invece di escludere un iscritto.</p>
+ `<article class="card rules"><h2>1. Formato</h2><p>Formato selezionato: <b>${selectedFormat.name}</b>. ${selectedFormat.description} Il numero di squadre non ha un limite fisso e la durata viene stimata usando biliardini, ore disponibili e minuti medi per partita. La stima è informativa e non blocca le iscrizioni. Se la modalità scelta è da 2 e il numero dei titolari è dispari, una sola squadra viene composta da 3 persone invece di escludere un iscritto.</p>
  <h2>2. Vittoria e punteggio</h2><ul><li>Vince la prima squadra che raggiunge <b>6 gol netti</b>.</li><li>Non è richiesto alcun vantaggio: il 6–5 conclude la partita.</li><li>Non sono ammessi pareggi né golden goal.</li><li>Vittoria: <b>3 punti</b>. Sconfitta: <b>0 punti</b>.</li></ul>
  <h2>3. Inizio e rimessa</h2><p>Prima della partita si effettua un sorteggio. Chi vince sceglie la prima palla oppure il lato del campo; l’avversario riceve l’altra opzione. La rimessa avviene dal centro. Dopo ogni gol rimette dal centro la squadra che lo ha subito.</p>
  <h2>4. Regole tecniche</h2><ul><li>Il gancio è vietato.</li><li>Il giro completo pulito è consentito nel rispetto della giocata; sono vietate rotazioni incontrollate.</li><li>È vietato scuotere, spostare o sollevare il tavolo.</li><li>È vietato toccare la pallina con le mani senza autorizzazione.</li><li>Non sono ammesse distrazioni volontarie o condotte antisportive.</li><li>Una pallina irraggiungibile viene rimessa in gioco dall’arbitro dal centro.</li></ul>
  <h2>5. Classifica e spareggi</h2><p>L’ordine è determinato da: 1) punti; 2) differenza reti; 3) gol fatti; 4) mini-classifica degli scontri tra tutte le squadre ancora a pari merito; 5) sorteggio stabile del sistema.</p>
- <h2>6. Qualificazione</h2><p>La dimensione della fase finale è scelta automaticamente tra 8, 16, 32, 64 o 128 squadre in proporzione ai partecipanti. Si qualificano prima le migliori classificate di ogni girone, poi le seconde, le terze e così via. Se i gironi hanno dimensioni diverse, il confronto tra pari posizione usa punti, differenza reti e gol fatti per partita, evitando di favorire chi ha disputato più incontri.</p>
+ <h2>6. Qualificazione</h2><p>${state.tournamentFormat==="league"?"Il girone unico non prevede qualificazioni: vince la prima classificata.":state.tournamentFormat==="knockout"?"Tutte le squadre entrano direttamente nel tabellone; gli eventuali passaggi automatici sono assegnati dal sorteggio iniziale.":state.tournamentFormat==="league_playoff"?"Al termine del campionato si qualificano le migliori 4 o 8 squadre, secondo il numero di partecipanti. Gli accoppiamenti seguono il piazzamento: prima contro ultima qualificata, seconda contro penultima e così via.":"La dimensione della fase finale è scelta automaticamente in proporzione ai partecipanti. Si qualificano prima le migliori classificate di ogni girone, poi le seconde, le terze e così via. Se i gironi hanno dimensioni diverse, il confronto usa punti, differenza reti e gol fatti per partita."}</p>
  <h2>7. Fase finale</h2><p>La fase finale è a eliminazione diretta, sempre al primo che raggiunge 6 gol. Le qualificate ricevono un seed complessivo; al primo turno si evitano, quando possibile, rivincite dello stesso girone. Da quattro qualificate in su è prevista anche la finale per il terzo posto.</p>
  <h2>8. Riserve, sostituzioni e ritiri</h2><p>Gli iscritti che non completano una squadra sono riserve. Nelle rose da 3 giocano in due: il terzo può entrare durante un’interruzione di gioco, comunicando il cambio agli avversari; il numero dei cambi interni può essere stabilito dall’organizzazione. Una sostituzione definitiva con una riserva esterna deve essere autorizzata e registrata; il sostituito non può entrare in un’altra squadra. In caso di ritiro, tutte le partite del girone della squadra ritirata vengono assegnate 6–0 agli avversari.</p>
  <h2>9. Arbitraggio</h2><p>Le decisioni arbitrali sono definitive. Per casi non previsti, decide l’organizzazione tutelando uniformità, sicurezza e correttezza sportiva.</p></article>`;
@@ -265,16 +300,18 @@ function randomScore(){const loser=Math.floor(Math.random()*6);return Math.rando
 function randomGroupResults(){state.matches.filter(m=>!m.played).forEach(m=>{[m.ga,m.gb]=randomScore();m.played=true;m.choice="Sorteggio casuale di test"});state.knockout=[];save("Risultati casuali inseriti nei gironi");render()}
 function randomKnockout(){const rounds=mainKnockoutRounds(),ordered=rounds.length>1?[...rounds.slice(0,-1),"3° posto",rounds.at(-1)]:rounds;for(const round of ordered){state.knockout.filter(m=>m.round===round&&m.a&&m.b&&!m.played).forEach(m=>{[m.ga,m.gb]=randomScore();m.played=true});advanceKnockout()}save("Fase finale completata con risultati casuali");render()}
 function generateGroups(){
- const ordered=shuffle(state.teams,state.seed+"-groups");
- const sizes=dynamicGroupSizes(ordered.length);state.groups=[];let cursor=0;sizes.forEach(n=>{state.groups.push(ordered.slice(cursor,cursor+n).map(t=>t.id));cursor+=n});
+ const mode=state.tournamentFormat||"classic",ordered=shuffle(state.teams,state.seed+"-"+mode);
+ if(mode==="knockout"){state.groups=[];state.matches=[];createKnockout(ordered.map((t,i)=>({id:t.id,group:-1,seed:i+1})),true);save("Tabellone a eliminazione diretta generato");render();return}
+ if(mode==="league"||mode==="league_playoff")state.groups=[ordered.map(t=>t.id)];
+ else{const sizes=dynamicGroupSizes(ordered.length);state.groups=[];let cursor=0;sizes.forEach(n=>{state.groups.push(ordered.slice(cursor,cursor+n).map(t=>t.id));cursor+=n})}
  const unscheduled=[];state.groups.forEach((g,gi)=>{for(let a=0;a<g.length;a++)for(let b=a+1;b<g.length;b++)unscheduled.push({id:uid("m"),group:gi,a:g[a],b:g[b],played:false})});
  state.matches=[];const maxTables=Math.max(1,+state.tables||1);let slot=1;
  while(unscheduled.length){const used=new Set();let table=1;for(let i=0;i<unscheduled.length&&table<=maxTables;){const m=unscheduled[i];if(!used.has(m.a)&&!used.has(m.b)){m.slot=slot;m.table=table++;used.add(m.a);used.add(m.b);state.matches.push(m);unscheduled.splice(i,1)}else i++}slot++}
- state.knockout=[];save("Gironi e calendario generati");render();
+ state.knockout=[];save(mode==="classic"?"Gironi e calendario generati":"Campionato e calendario generati");render();
 }
 function resultModal(id,ko=false){
  const list=ko?state.knockout:state.matches,m=list.find(x=>x.id===id);
- const heading=ko?m.round:`Girone ${groupLabel(m.group)}`;
+ const heading=ko?m.round:["league","league_playoff"].includes(state.tournamentFormat)?"Campionato":`Girone ${groupLabel(m.group)}`;
  modal(`<h2>${heading}</h2><p><b>${esc(nameTeam(m.a))}</b> contro <b>${esc(nameTeam(m.b))}</b></p><form id="resultForm" class="form-grid"><label class="field">${esc(nameTeam(m.a))}<input name="ga" type="number" min="0" max="6" required value="${m.played?m.ga:""}"></label><label class="field">${esc(nameTeam(m.b))}<input name="gb" type="number" min="0" max="6" required value="${m.played?m.gb:""}"></label><label class="field full">Sorteggio iniziale<select name="choice"><option>Squadra A: palla · Squadra B: campo</option><option>Squadra A: campo · Squadra B: palla</option></select></label><div class="full warning">Un risultato valido deve avere un solo vincitore a 6 gol.</div><div class="full"><button class="btn">Conferma risultato</button></div></form>`,()=>{const d=Object.fromEntries(new FormData($("#resultForm"))),ga=+d.ga,gb=+d.gb;if(ga===gb||Math.max(ga,gb)!==6)return toast("Inserisci un risultato valido: un solo 6");if(ko&&m.played)invalidateFollowingRounds(m.round);m.ga=ga;m.gb=gb;m.choice=d.choice;m.played=true;if(ko)advanceKnockout();save(`Risultato registrato: ${nameTeam(m.a)} ${ga}-${gb} ${nameTeam(m.b)}`);closeModal();render()});
 }
 function invalidateFollowingRounds(round){const source=state.knockout.find(m=>m.round===round),idx=source?.roundIndex;if(idx===undefined||round==="Finale"||round==="3° posto")return;state.knockout.filter(m=>m.round==="3° posto"||(m.roundIndex??-1)>idx).forEach(m=>{m.a=null;m.b=null;m.played=false;delete m.ga;delete m.gb})}
@@ -288,20 +325,31 @@ function getStandings(groupIds){
  return rows.sort((a,b)=>a.withdrawn-b.withdrawn||b.pts-a.pts||b.gd-a.gd||b.gf-a.gf||(b.miniPts||0)-(a.miniPts||0)||(b.miniGd||0)-(a.miniGd||0)||(b.miniGf||0)-(a.miniGf||0)||a.tie-b.tie);
 }
 function qualifiers(){
- const ranks=state.groups.map(getStandings),rate=(x,k)=>(x.played?x[k]/x.played:0),cmp=(a,b)=>rate(b,"pts")-rate(a,"pts")||rate(b,"gd")-rate(a,"gd")||rate(b,"gf")-rate(a,"gf")||a.tie-b.tie,target=suggestedKnockoutSize(state.teams.length),all=[];let pos=0;
+ const ranks=state.groups.map(getStandings),rate=(x,k)=>(x.played?x[k]/x.played:0),cmp=(a,b)=>rate(b,"pts")-rate(a,"pts")||rate(b,"gd")-rate(a,"gd")||rate(b,"gf")-rate(a,"gf")||a.tie-b.tie,target=(state.tournamentFormat==="league_playoff"?playoffSize(state.teams.length):suggestedKnockoutSize(state.teams.length)),all=[];let pos=0;
+ if(state.tournamentFormat==="league_playoff")return{all:ranks[0].slice(0,target)};
  while(all.length<target){const tier=ranks.map(r=>r[pos]).filter(Boolean).sort(cmp);if(!tier.length)break;all.push(...tier.slice(0,target-all.length));pos++}
  return {all};
 }
-function generateKnockout(){
- const q=qualifiers(),size=q.all.length,seededRows=q.all.map((x,i)=>({...x,seed:i+1})),top=seededRows.slice(0,size/2),bottom=seededRows.slice(size/2),pairs=[];
- top.forEach(a=>{let idx=-1;for(let i=bottom.length-1;i>=0;i--)if(bottom[i].group!==a.group){idx=i;break}if(idx<0)idx=bottom.length-1;const b=bottom.splice(idx,1)[0];pairs.push([a,b])});
- const rounds=knockoutRoundNames(size);state.knockout=pairs.map((p,i)=>({id:uid("ko"),round:rounds[0],roundIndex:0,index:i,a:p[0].id,b:p[1].id,seedA:p[0].seed,seedB:p[1].seed,played:false}));
+function createKnockout(rows,direct=false){
+ const seededRows=rows.map((x,i)=>({...x,seed:i+1})),size=direct?nextPowerOfTwo(seededRows.length):seededRows.length,pairs=[];
+ if(direct){const padded=[...seededRows,...Array(size-seededRows.length).fill(null)],top=padded.slice(0,size/2),bottom=padded.slice(size/2).reverse();top.forEach((a,i)=>pairs.push([a,bottom[i]]))}
+ else{const top=seededRows.slice(0,size/2),bottom=seededRows.slice(size/2);top.forEach(a=>{let idx=-1;for(let i=bottom.length-1;i>=0;i--)if(bottom[i].group!==a.group){idx=i;break}if(idx<0)idx=bottom.length-1;const b=bottom.splice(idx,1)[0];pairs.push([a,b])})}
+ const rounds=knockoutRoundNames(size);state.knockout=pairs.map((p,i)=>({id:uid("ko"),round:rounds[0],roundIndex:0,index:i,a:p[0]?.id||null,b:p[1]?.id||null,seedA:p[0]?.seed||null,seedB:p[1]?.seed||null,played:false}));
+ if(direct)state.knockout.forEach(m=>{if(m.a&&!m.b){m.played=true;m.ga=6;m.gb=0;m.bye=true}});
  for(let ri=1;ri<rounds.length;ri++){const n=size/2**(ri+1);for(let i=0;i<n;i++)state.knockout.push({id:uid("ko"),round:rounds[ri],roundIndex:ri,index:i,a:null,b:null,played:false})}
  if(size>=4)state.knockout.push({id:uid("ko"),round:"3° posto",roundIndex:rounds.length-1,index:0,a:null,b:null,played:false});
+ advanceKnockout();
+}
+function generateKnockout(){
+ const mode=state.tournamentFormat||"classic";
+ if(mode==="league")return toast("Il girone unico non prevede una fase finale");
+ if(mode==="knockout"){const ordered=shuffle(state.teams,state.seed+"-knockout");createKnockout(ordered.map((t,i)=>({id:t.id,group:-1,seed:i+1})),true)}
+ else{const q=qualifiers();createKnockout(q.all,false)}
+ const size=state.knockout.filter(m=>m.roundIndex===0).length*2;
  save(`Tabellone finale da ${size} squadre creato`);render();
 }
 function advanceKnockout(){const rounds=mainKnockoutRounds();for(let r=0;r<rounds.length-1;r++){const cur=state.knockout.filter(m=>m.round===rounds[r]),next=state.knockout.filter(m=>m.round===rounds[r+1]);cur.forEach((m,i)=>{if(m.played){const w=m.ga>m.gb?m.a:m.b;if(i%2===0)next[Math.floor(i/2)].a=w;else next[Math.floor(i/2)].b=w}})}const semis=state.knockout.filter(m=>m.round===rounds.at(-2)),third=state.knockout.find(m=>m.round==="3° posto");if(third&&semis.length===2&&semis.every(m=>m.played)){third.a=semis[0].ga<semis[0].gb?semis[0].a:semis[0].b;third.b=semis[1].ga<semis[1].gb?semis[1].a:semis[1].b}}
-function getChampion(){const f=state.knockout.find(m=>m.round==="Finale"&&m.played);return f?team(f.ga>f.gb?f.a:f.b):null}
+function getChampion(){if((state.tournamentFormat||"classic")==="league"&&state.groups.length&&state.matches.length&&state.matches.every(m=>m.played))return team(getStandings(state.groups[0])[0]?.id);const f=state.knockout.find(m=>m.round==="Finale"&&m.played);return f?team(f.ga>f.gb?f.a:f.b):null}
 
 function applyUiMode(){
  document.documentElement.lang=uiLanguage;
@@ -310,7 +358,7 @@ function applyUiMode(){
  $("#roleBadge").textContent=accessMode==="admin"?(uiLanguage==="en"?"Administrator":"Amministratore"):(uiLanguage==="en"?"Public viewer":"Visualizzatore");
  $("#accessButton").textContent=accessMode==="admin"?(uiLanguage==="en"?"Public view":"Vista pubblica"):(uiLanguage==="en"?"Admin login":"Login admin");
  $("#accessButton").dataset.action=accessMode==="admin"?"public-view":"admin-login";
- if(accessMode==="viewer"&&["registrations","teams"].includes(currentView)){currentView="dashboard";dashboard()}
+ if(accessMode==="viewer"&&["registrations","teams","format"].includes(currentView)){currentView="dashboard";dashboard()}
  if(uiLanguage==="en")translateTree(document.body);
 }
 function translateTree(root){
@@ -321,7 +369,7 @@ function translateTree(root){
 }
 async function pinDigest(pin){const bytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(pin));return [...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,"0")).join("")}
 function enterPublicView(){
- accessMode="viewer";currentView=["registrations","teams"].includes(currentView)?"dashboard":currentView;
+ accessMode="viewer";currentView=["registrations","teams","format"].includes(currentView)?"dashboard":currentView;
  const url=new URL(location.href);url.searchParams.set("view","public");if(state)url.searchParams.set("tournament",state.id);history.replaceState(null,"",url);render();
 }
 function openAdminLogin(){
@@ -347,7 +395,8 @@ document.addEventListener("click",e=>{
  if(b.dataset.action==="home"){state=null;render();return}
  if(b.dataset.action==="new-tournament")createTournament();
  if(b.dataset.view){currentView=b.dataset.view;render()}
- if(b.dataset.mode&&b.dataset.mode!==state.mode){if((state.players.length||state.teams.length)&&!confirm("Cambiare modalità azzera iscrizioni, squadre e risultati. Continuare?"))return;const keep={id:state.id,title:state.title,tables:state.tables,availableHours:state.availableHours,matchMinutes:state.matchMinutes,teamSize:state.teamSize,entryFee:state.entryFee,fixedCosts:state.fixedCosts,prizeSplit:state.prizeSplit,createdAt:state.createdAt};state=Object.assign(blankState(),keep,{mode:b.dataset.mode});save("Modalità iscrizione impostata");render()}
+ if(b.dataset.mode&&b.dataset.mode!==state.mode){if((state.players.length||state.teams.length)&&!confirm("Cambiare modalità azzera iscrizioni, squadre e risultati. Continuare?"))return;const keep={id:state.id,title:state.title,tables:state.tables,availableHours:state.availableHours,matchMinutes:state.matchMinutes,teamSize:state.teamSize,tournamentFormat:state.tournamentFormat,entryFee:state.entryFee,fixedCosts:state.fixedCosts,prizeSplit:state.prizeSplit,createdAt:state.createdAt};state=Object.assign(blankState(),keep,{mode:b.dataset.mode});save("Modalità iscrizione impostata");render()}
+ if(b.dataset.tournamentFormat&&b.dataset.tournamentFormat!==state.tournamentFormat){if((state.matches.some(m=>m.played)||state.knockout.some(m=>m.played&&!m.bye))&&!confirm("Cambiare formato cancella calendario, tabellone e risultati già inseriti. Continuare?"))return;state.tournamentFormat=b.dataset.tournamentFormat;state.groups=[];state.matches=[];state.knockout=[];save(`Formato scelto: ${TOURNAMENT_FORMATS[state.tournamentFormat].name}`);render()}
  if(b.dataset.action==="open-registration")openRegistration();
  if(b.dataset.action==="close-modal")closeModal();
  if(b.dataset.action==="generate-teams")generateTeams();
