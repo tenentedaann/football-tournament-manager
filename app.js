@@ -10,7 +10,7 @@ let accessMode=new URLSearchParams(location.search).get("view")==="public"?"view
 const TRANSLATIONS={
  "Amministratore":"Administrator","Visualizzatore":"Public viewer","Vista pubblica":"Public view","Login admin":"Admin login",
  "Salvato in locale":"Saved locally","Esporta":"Export","Importa":"Import","Iscrizioni":"Registrations","Squadre":"Teams","Formato":"Format","Gironi":"Groups","Partite":"Matches","Fase finale":"Knockout","Statistiche":"Statistics","Regolamento":"Rules",
- "Archivio tornei":"Tournament archive","I tuoi tornei":"Your tournaments","Crea torneo":"Create tournament","Nessun torneo":"No tournaments","Centro torneo":"Tournament center",
+ "Archivio tornei":"Tournament archive","I miei tornei":"My tournaments","I tuoi tornei":"Your tournaments","Crea torneo":"Create tournament","Nessun torneo":"No tournaments","Centro torneo":"Tournament center",
  "Gestisci iscrizioni":"Manage registrations","Configura torneo":"Set up tournament","Iscritti":"Entrants","Montepremi":"Prize pool","Prossime partite":"Upcoming matches","Attività recente":"Recent activity",
  "Fase 1":"Step 1","Fase 2":"Step 2","Fase 3":"Step 3","Fase 4":"Step 4","Fase 5":"Step 5","Analisi":"Analysis","Guida ufficiale":"Official guide",
  "Composizione squadre":"Team composition","Formato torneo":"Tournament format","Gironi + playoff":"Groups + playoffs","Girone unico":"Single league","Eliminazione diretta":"Single elimination","Campionato + playoff":"League + playoffs","Calendario e risultati":"Schedule and results","Regolamento del torneo":"Tournament rules","Dati casuali":"Random data",
@@ -113,7 +113,8 @@ function render(){
 }
 function renderHub(){
  document.body.classList.add("hub-page");
- $("#nav").hidden=true;
+ $("#nav").hidden=false;
+ document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.action==="home"));
  main.innerHTML=`<div class="hub"><section class="hub-hero"><div class="eyebrow">Archivio tornei</div><h1>I tuoi tornei</h1><p class="muted">Ogni cartella conserva iscritti, calendario, risultati e statistiche separatamente.</p></section><div class="actions" style="margin:18px 0 24px"><button class="btn" data-action="new-tournament">+ Crea torneo</button></div>${library.tournaments.length?`<div class="folder-grid">${library.tournaments.map(t=>`<article class="card folder" data-open-tournament="${t.id}"><button class="folder-delete" data-delete-tournament="${t.id}" aria-label="Elimina ${esc(t.title)}">×</button><div class="folder-icon">📁</div><h2>${esc(t.title)}</h2><p class="muted">${new Date(t.createdAt).toLocaleDateString("it-IT")}</p><div class="folder-meta"><span class="badge">${t.players?.length||0} iscritti</span><span class="badge gray">${t.tables||4} biliardini</span><span class="badge gold">${t.matches?.filter(m=>m.played).length||0} risultati</span></div></article>`).join("")}</div>`:empty("Nessun torneo","Crea la prima cartella torneo per cominciare.")}</div>`;
 }
 function createTournament(){
