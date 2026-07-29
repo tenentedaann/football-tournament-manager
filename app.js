@@ -20,7 +20,11 @@ const TRANSLATIONS={
  "Principiante":"Beginner","Intermedio":"Intermediate","Esperto":"Expert","Titolare":"Starter","Riserva":"Reserve","Modifica":"Edit","Rinomina":"Rename","Sostituzione":"Substitution",
  "Ritiro":"Withdraw","Cambia seed":"Change seed","Componi squadre":"Create teams","Ripeti sorteggio":"Draw again","Stampa":"Print","Genera gironi":"Generate groups","Rigenera gironi":"Regenerate groups",
  "Tutte":"All","Risultato":"Result","Inserisci risultato":"Enter result","Completa casualmente":"Fill randomly","Crea tabellone":"Create bracket","VINCITORE DEL TORNEO":"TOURNAMENT WINNER",
- "Congratulazioni!":"Congratulations!","Statistiche squadre":"Team statistics","Statistiche giocatori":"Player statistics","Hall of Fame dei tornei":"Tournament Hall of Fame","Stampa regolamento":"Print rules"
+ "Congratulazioni!":"Congratulations!","Statistiche squadre":"Team statistics","Statistiche giocatori":"Player statistics","Hall of Fame dei tornei":"Tournament Hall of Fame","Stampa regolamento":"Print rules",
+ "Benvenuto nel tuo portale tornei":"Welcome to your tournament portal","Accedi o registrati per organizzare un torneo di calcio balilla dall’iscrizione fino alla proclamazione del vincitore.":"Log in or sign up to organize a table football tournament from registration to the final winner.",
+ "Crea il torneo":"Create the tournament","Imposta partecipanti, squadre, tempo e biliardini.":"Set participants, teams, time and available tables.","Scegli la formula":"Choose the format","Gironi, campionato, playoff oppure eliminazione diretta.":"Groups, league, playoffs or single elimination.",
+ "Gioca e condividi":"Play and share","Inserisci i risultati e pubblica il tabellone tramite QR.":"Enter results and share the tournament using a QR code.","Area organizzatori":"Organizer area","Crea il tuo account":"Create your account","Inserisci le tue credenziali per iniziare.":"Enter your credentials to get started.",
+ "Registrati gratuitamente per creare e gestire i tuoi tornei.":"Sign up for free to create and manage your tournaments.","Non hai un account? Registrati":"No account? Sign up","Hai già un account? Accedi":"Already registered? Log in","Accedi":"Log in","Registrati":"Sign up","Indietro":"Back","Avanti":"Next"
 };
 const LEVEL={principiante:1,intermedio:2,esperto:3};
 const ROLE_LABEL={portiere:"Portiere",attaccante:"Attaccante",indifferente:"Indifferente"};
