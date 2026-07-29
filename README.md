@@ -1,4 +1,4 @@
-# Foosball Tournament Manager
+# Football Tournament Manager
 
 Applicazione web per creare, gestire e condividere tornei di calcio balilla.
 
