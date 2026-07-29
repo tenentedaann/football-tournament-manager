@@ -81,7 +81,7 @@ async function loadRemoteLibrary(){
 function saveSession(session){remoteSession=session;localStorage.setItem(SESSION_KEY,JSON.stringify(session))}
 async function restoreSession(){try{const s=JSON.parse(localStorage.getItem(SESSION_KEY)||"null");if(!s)return null;if(s.expires_at&&s.expires_at*1000>Date.now()+60000)return s;if(!s.refresh_token)return null;const r=await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`,{method:"POST",headers:{"apikey":SUPABASE_KEY,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:s.refresh_token})});if(!r.ok)return null;const fresh=await r.json();saveSession(fresh);return fresh}catch{return null}}
 function showAuth(message=""){
- accessMode="viewer";$("#nav").hidden=true;document.body.dataset.role="viewer";document.body.classList.add("auth-page");$("#accessButton").hidden=true;$("#roleBadge").textContent="Accesso amministratore";
+ accessMode="viewer";$("#nav").hidden=true;document.body.dataset.role="viewer";document.body.classList.remove("hub-page");document.body.classList.add("auth-page");$("#accessButton").hidden=true;$("#roleBadge").textContent="Accesso amministratore";
  main.innerHTML=`<section class="welcome-shell"><div class="welcome-overlay"></div><div class="welcome-layout"><div class="welcome-copy"><div class="welcome-kicker">⚽ Football Tournament Manager</div><h1>Benvenuto nel tuo portale tornei</h1><p>Accedi o registrati per organizzare un torneo di calcio balilla dall’iscrizione fino alla proclamazione del vincitore.</p><div class="welcome-steps"><div><b>1</b><span><strong>Crea il torneo</strong><small>Imposta partecipanti, squadre, tempo e biliardini.</small></span></div><div><b>2</b><span><strong>Scegli la formula</strong><small>Gironi, campionato, playoff oppure eliminazione diretta.</small></span></div><div><b>3</b><span><strong>Gioca e condividi</strong><small>Inserisci i risultati e pubblica il tabellone tramite QR.</small></span></div></div></div><div class="card auth-card"><div class="eyebrow">Area organizzatori</div><h2>${authMode==="login"?"Accedi":"Crea il tuo account"}</h2><p class="muted">${message||(authMode==="login"?"Inserisci le tue credenziali per iniziare.":"Registrati gratuitamente per creare e gestire i tuoi tornei.")}</p><form id="authForm" class="form-grid"><label class="field full">Email<input name="email" type="email" autocomplete="email" required></label>${authMode==="signup"?`<label class="field full">Nome<input name="display_name" autocomplete="name" required></label>`:""}<label class="field full">Password<input name="password" type="password" minlength="8" autocomplete="${authMode==="login"?"current-password":"new-password"}" required></label><div class="full actions auth-actions"><button type="submit" class="btn">${authMode==="login"?"Accedi":"Registrati"}</button><button type="button" class="btn secondary" data-action="toggle-auth">${authMode==="login"?"Non hai un account? Registrati":"Hai già un account? Accedi"}</button></div></form></div></div></section>`;applyUiMode();
 }
 async function submitAuth(form){
@@ -104,6 +104,7 @@ async function shareTournament(){
 
 function render(){
   document.body.classList.remove("auth-page");
+  document.body.classList.toggle("hub-page",!state);
   if(!state){renderHub();applyUiMode();return}
   $("#nav").hidden=false;
   document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===currentView));
@@ -111,6 +112,7 @@ function render(){
   applyUiMode();
 }
 function renderHub(){
+ document.body.classList.add("hub-page");
  $("#nav").hidden=true;
  main.innerHTML=`<div class="hub"><section class="hub-hero"><div class="eyebrow">Archivio tornei</div><h1>I tuoi tornei</h1><p class="muted">Ogni cartella conserva iscritti, calendario, risultati e statistiche separatamente.</p></section><div class="actions" style="margin:18px 0 24px"><button class="btn" data-action="new-tournament">+ Crea torneo</button></div>${library.tournaments.length?`<div class="folder-grid">${library.tournaments.map(t=>`<article class="card folder" data-open-tournament="${t.id}"><button class="folder-delete" data-delete-tournament="${t.id}" aria-label="Elimina ${esc(t.title)}">×</button><div class="folder-icon">📁</div><h2>${esc(t.title)}</h2><p class="muted">${new Date(t.createdAt).toLocaleDateString("it-IT")}</p><div class="folder-meta"><span class="badge">${t.players?.length||0} iscritti</span><span class="badge gray">${t.tables||4} biliardini</span><span class="badge gold">${t.matches?.filter(m=>m.played).length||0} risultati</span></div></article>`).join("")}</div>`:empty("Nessun torneo","Crea la prima cartella torneo per cominciare.")}</div>`;
 }
