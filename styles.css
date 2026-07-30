@@ -20,7 +20,7 @@
 
 /* Theme, responsive header and card consistency */
 html,body,.app-shell,.main{background:var(--wash);color:var(--ink)}
-.header-menu{display:flex;align-items:center;gap:9px}.header-menu-button{display:none}
+.header-actions{position:relative}.header-menu-button{display:inline-flex}.header-menu{display:none;position:absolute;right:0;top:46px;width:340px;max-height:calc(100vh - 90px);overflow:auto;background:var(--dark);border:1px solid #46665a;border-radius:12px;padding:12px;box-shadow:var(--shadow);align-items:stretch;flex-direction:column;gap:9px;z-index:60}.header-menu.open{display:flex}.header-menu>*{width:100%;justify-content:center}.header-menu .language-picker{justify-content:center}
 .kpi{min-height:155px}.format-card{min-height:310px}.team-card{min-height:170px}
 [data-theme="dark"] .modal-card,[data-theme="dark"] .folder,[data-theme="dark"] .tabs button,[data-theme="dark"] .format-card,[data-theme="dark"] .guided-steps button{background:var(--paper);color:var(--ink);border-color:var(--line)}
 [data-theme="dark"] .format-card.selected{background:#1b352b}
@@ -42,4 +42,16 @@ html,body,.app-shell,.main{background:var(--wash);color:var(--ink)}
  .user-name{max-width:none;text-align:center}.save-state{display:block;text-align:center;margin:0}
  .grid.kpis{grid-template-columns:1fr}.kpi,.format-card,.team-card{min-height:0;width:100%}
  .card{width:100%;min-width:0}.format-metrics span{min-height:58px}
+}
+
+.user-name{max-width:100%;background:transparent;border:1px solid #46665a;border-radius:8px;padding:9px 11px;cursor:pointer;text-align:center}
+.step-next{position:fixed;right:24px;bottom:24px;z-index:45;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:10px;box-shadow:0 14px 38px rgba(8,30,21,.22)}
+.step-next small{max-width:220px}.main{padding-bottom:110px}
+@media(max-width:700px){
+ .header-menu{width:min(310px,calc(100vw - 24px));max-height:75vh}
+ .team-list{display:grid!important;grid-template-columns:minmax(0,1fr)!important;width:100%;overflow:visible}
+ .team-card{display:block;overflow:hidden}.team-name{align-items:flex-start}.team-name>span:first-child,.players,.players div{min-width:0;overflow-wrap:anywhere;word-break:break-word}
+ .team-card .actions{display:grid!important;grid-template-columns:1fr;gap:8px}.team-card .actions .btn{width:100%;justify-content:center;margin:0}
+ .step-next{right:14px;bottom:14px;max-width:calc(100vw - 28px);align-items:stretch;flex-direction:column}.step-next small{display:none}.step-next .btn{width:auto;min-width:150px}
+ .step-nav{padding:12px;margin-top:18px}.main{padding-bottom:100px}
 }

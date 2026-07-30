@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#13251f">
   <title>Football Tournament Manager</title>
-  <link rel="stylesheet" href="styles.css?v=20260730-2">
+  <link rel="stylesheet" href="styles.css?v=20260730-3">
 </head>
 <body>
   <header class="topbar">
@@ -14,7 +14,7 @@
       <button id="headerMenuButton" class="btn ghost header-menu-button" data-action="toggle-header-menu" aria-expanded="false" aria-controls="headerMenu">☰ Menu</button>
       <div id="headerMenu" class="header-menu">
       <span id="roleBadge" class="role-badge">Organizzatore</span>
-      <span id="userName" class="user-name admin-only" hidden></span>
+      <button id="userName" class="user-name admin-only" data-action="open-profile" hidden></button>
       <label class="language-picker" aria-label="Lingua"><span>🌐</span><select id="languageSelect"><option value="it">IT</option><option value="en">EN</option></select></label>
       <button id="themeButton" class="btn ghost" data-action="toggle-theme" aria-label="Cambia tema">🌙 Scuro</button>
       <button id="accessButton" class="btn ghost" data-action="public-view">Vista pubblica</button>
@@ -52,6 +52,6 @@
   </div>
   <div id="toast" class="toast" hidden></div>
   <script src="qrcode.js?v=1.4.4"></script>
-  <script src="app.js?v=20260730-2"></script>
+  <script src="app.js?v=20260730-3"></script>
 </body>
 </html>

@@ -325,6 +325,11 @@ function openRegistration(edit=null){
 function opts(map,val){return Object.entries(map).map(([k,v])=>`<option value="${k}" ${val===k?"selected":""}>${v}</option>`).join("")}
 function modal(html,onSubmit){$("#modalBody").innerHTML=html;$("#modal").hidden=false;if(onSubmit)$("#modalBody form").addEventListener("submit",e=>{e.preventDefault();onSubmit(e)})}
 function closeModal(){$("#modal").hidden=true}
+function openProfile(){
+ if(!remoteSession?.user)return toast("Accedi per gestire il profilo");
+ const user=remoteSession.user,display=organizerName(),email=user.email||"";
+ modal(`<h2>Il mio profilo</h2><p class="muted">Gestisci i dati visibili e la password del tuo account.</p><form id="profileForm" class="form-grid"><label class="field full">Email account<input value="${esc(email)}" readonly></label><label class="field full">Username visibile<input name="display_name" maxlength="${LIMITS.name}" value="${esc(display)}" required></label><label class="field full">Nuova password <small class="muted">Lascia vuoto per non modificarla</small><input name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password"></label><label class="field full">Ripeti nuova password<input name="confirm_password" type="password" minlength="8" maxlength="128" autocomplete="new-password"></label><div class="full actions"><button class="btn">Salva profilo</button><button type="button" class="btn secondary" data-action="close-modal">Annulla</button></div></form>`,async()=>{const d=Object.fromEntries(new FormData($("#profileForm"))),name=cleanText(d.display_name,LIMITS.name);if(!validName(name))return toast("Lo username deve contenere almeno una lettera o un numero");if(d.password&&d.password!==d.confirm_password)return toast("Le due password non coincidono");const payload={data:{...(user.user_metadata||{}),display_name:name}};if(d.password)payload.password=d.password;try{const updated=await supabase("/auth/v1/user",{method:"PUT",body:JSON.stringify(payload)});remoteSession.user=updated;saveSession(remoteSession);rememberUsername(name,updated.email||email);closeModal();applyUiMode();toast(d.password?"Profilo e password aggiornati":"Profilo aggiornato")}catch(err){toast("Aggiornamento non riuscito: "+err.message)}})
+}
 
 function generateTeams(){
  if(state.players.length<2)return toast("Servono almeno due giocatori");
@@ -471,6 +476,7 @@ document.addEventListener("click",e=>{
  if(b.dataset.action==="logout"){localStorage.removeItem(SESSION_KEY);remoteSession=null;state=null;authMode="login";showAuth("Sessione terminata. I tornei restano salvati sul dispositivo.");return}
  if(b.dataset.action==="toggle-theme"){uiTheme=uiTheme==="dark"?"light":"dark";localStorage.setItem(THEME_KEY,uiTheme);applyUiMode();return}
  if(b.dataset.action==="toggle-header-menu"){const menu=$("#headerMenu"),open=!menu.classList.contains("open");menu.classList.toggle("open",open);b.setAttribute("aria-expanded",String(open));return}
+ if(b.dataset.action==="open-profile"){openProfile();return}
  if(b.dataset.action==="share"){shareTournament();return}
  if(b.dataset.action==="public-view"){enterPublicView();return}
  if(b.dataset.action==="organizer-login"){openAdminLogin();return}
