@@ -466,6 +466,7 @@ function openAdminLogin(){
 }
 
 document.addEventListener("click",e=>{
+ if(!e.target.closest(".header-actions")){$("#headerMenu")?.classList.remove("open");$("#headerMenuButton")?.setAttribute("aria-expanded","false")}
  const b=e.target.closest("button");
  if(b?.dataset.deleteTournament){openDeleteConfirmation(b.dataset.deleteTournament);return}
  const folder=e.target.closest("[data-open-tournament]");if(folder){state=library.tournaments.find(t=>t.id===folder.dataset.openTournament);library.currentId=state.id;persistLibrary();currentView="dashboard";render();return}
